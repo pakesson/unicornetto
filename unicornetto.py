@@ -41,6 +41,14 @@ class Unicornetto:
         self.tracing = tracing
         self.last_address = 0x0
         self.last_instruction_size = 0x0
+
+        self.instruction_count = 0
+        self.cycle_count = 0
+
+        self.glitch_armed = False
+        self.glitch_delay = 0
+        self.glitch_cycle_count = 0
+
         self.function_hooks = {}
         
         self._map_memory()
@@ -83,9 +91,25 @@ class Unicornetto:
         if self.last_address == address and disasm.mnemonic == 'b':
             print("Infinite loop detected. Stopping.")
             uc.emu_stop()
+
         self.last_address = address
         self.last_instruction_size = size
-    
+
+        if self.glitch_armed and self.glitch_cycle_count >= self.glitch_delay:
+            print("Fault injected! Skipping instruction.")
+            self.glitch_armed = False
+            self.glitch_cycle_count = 0
+            # Skip instruction
+            self.uc.reg_write(UC_ARM_REG_PC, (address + size) | 1)
+            # TODO: More glitch types
+            return
+
+        self.instruction_count += 1
+        cycles = self._cycles_for_ins(disasm)
+        self.cycle_count += cycles
+        if self.glitch_armed:
+            self.glitch_cycle_count += cycles
+
     def _hook_block(self, uc, address, size, user_data):
         self._print_debug(f"Entering basic block at 0x{address:08x}, block size = 0x{size}")
         if self.is_thumb_mode():
@@ -126,6 +150,19 @@ class Unicornetto:
         cpsr = self.uc.reg_read(UC_ARM_REG_CPSR)
         return ((cpsr >> 5) & 1) == 1
 
+    def glitch(self, delay=0):
+        self.glitch_armed = True
+        self.glitch_delay = delay
+        self.glitch_cycle_count = 0
+
+    def set_tracing(self, tracing):
+        self.tracing = tracing
+
     def run(self, end = 0x0, timeout = 5):
+        if isinstance(end, str):
+            # This should not be a thumb mode address,
+            # no matter what mode the emulation is running in
+            end = self.firmware.get_symbol(end)
+            end = end ^ (end & 0x1)
         # Always start in thumb mode
         self.uc.emu_start(self.entrypoint | 1, end, timeout=timeout*UC_SECOND_SCALE)
