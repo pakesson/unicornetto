@@ -28,7 +28,7 @@ arm_cortexm_registers = {
 }
 
 class Unicornetto:
-    def __init__(self, firmware_file, tracing = False) -> None:
+    def __init__(self, firmware_file, verbose = False, tracing = False) -> None:
         if self.arch != UC_ARCH_ARM or self.mode != UC_MODE_THUMB | UC_MODE_MCLASS:
             raise RuntimeError(f"Unsupported architecture {self.arch}, mode {self.mode}")
 
@@ -38,9 +38,13 @@ class Unicornetto:
         self.capstone = cs.Cs(cs.CS_ARCH_ARM, cs.CS_MODE_THUMB | cs.CS_MODE_MCLASS)
         self.capstone.detail = True
 
-        self.tracing = tracing
+        self.verbose = verbose
+
         self.last_address = 0x0
         self.last_instruction_size = 0x0
+
+        self.tracing = tracing
+        self.traces = [] # List of tuples
 
         self.instruction_count = 0
         self.cycle_count = 0
@@ -57,7 +61,7 @@ class Unicornetto:
         self._set_initial_state()
     
     def _print_debug(self, val):
-        if self.tracing:
+        if self.verbose:
             print(val)
     
     def _map_memory(self):
@@ -87,7 +91,8 @@ class Unicornetto:
     def _hook_code(self, uc, address, size, user_data):
         data = uc.mem_read(address, size*2)
         disasm = next(self.capstone.disasm(data, address, 1))
-        self._print_debug(f"0x{disasm.address:08x}:\t{disasm.mnemonic:<8} {disasm.op_str:<32}")
+        disasm_str = f"0x{disasm.address:08x}:\t{disasm.mnemonic:<8} {disasm.op_str:<32}"
+        self._print_debug(disasm_str)
         if self.last_address == address and disasm.mnemonic == 'b':
             print("Infinite loop detected. Stopping.")
             uc.emu_stop()
@@ -109,6 +114,11 @@ class Unicornetto:
         self.cycle_count += cycles
         if self.glitch_armed:
             self.glitch_cycle_count += cycles
+
+        # Instruction tracing
+        if self.tracing:
+            trace = (address, disasm_str, cycles, self.cycle_count)
+            self.traces += trace
 
     def _hook_block(self, uc, address, size, user_data):
         self._print_debug(f"Entering basic block at 0x{address:08x}, block size = 0x{size}")
@@ -141,6 +151,15 @@ class Unicornetto:
         self._print_debug(f"Hooking {symbol_or_addr:08x}")
         self.function_hooks[symbol_or_addr] = func
 
+    def map_memory(self, address, size, perms=UC_PROT_ALL):
+        self.uc.mem_map(address, size, perms=UC_PROT_READ|UC_PROT_WRITE)
+
+    def write_memory(self, address, value):
+        self.uc.mem_write(address, value)
+
+    def write_register(self, address, value):
+        self.uc.reg_write(address, value)
+
     def print_state(self):
         for (name, code) in arm_cortexm_registers.items():
             value = self.uc.reg_read(code)
@@ -158,11 +177,25 @@ class Unicornetto:
     def set_tracing(self, tracing):
         self.tracing = tracing
 
-    def run(self, end = 0x0, timeout = 5):
+    def get_traces(self):
+        return self.traces
+
+    def set_verbose(self, verbose):
+        self.verbose = verbose
+
+    def get_symbol(self, symbol):
+        return self.firmware.get_symbol(symbol)
+
+    def run(self, start = -1, end = 0x0, timeout = 5):
+        if start == -1:
+            start = self.entrypoint
+        if isinstance(start, str):
+            start = self.firmware.get_symbol(start)
         if isinstance(end, str):
-            # This should not be a thumb mode address,
-            # no matter what mode the emulation is running in
             end = self.firmware.get_symbol(end)
-            end = end ^ (end & 0x1)
         # Always start in thumb mode
-        self.uc.emu_start(self.entrypoint | 1, end, timeout=timeout*UC_SECOND_SCALE)
+        start = start | 1
+        # This should _not_ be a thumb mode address,
+        # no matter what mode the emulation is running in
+        end = end ^ (end & 0x1)
+        self.uc.emu_start(start, end, timeout=timeout*UC_SECOND_SCALE)
