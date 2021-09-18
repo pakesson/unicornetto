@@ -188,7 +188,7 @@ class Unicornetto:
     def get_symbol(self, symbol):
         return self.firmware.get_symbol(symbol)
 
-    def run(self, start = -1, end = 0x0, timeout = 5):
+    def run(self, start = -1, end = 0x0, timeout = 30):
         if start == -1:
             start = self.entrypoint
         if isinstance(start, str):
