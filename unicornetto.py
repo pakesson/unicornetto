@@ -117,7 +117,9 @@ class Unicornetto:
 
         # Instruction tracing
         if self.tracing:
-            trace = (address, disasm_str, cycles, self.cycle_count)
+            funcname = self.firmware.get_dwarf_funcname(address)
+            source_line = self.firmware.get_dwarf_source(address)
+            trace = (address, disasm_str, cycles, self.cycle_count, funcname, source_line)
             self.traces += trace
 
     def _hook_block(self, uc, address, size, user_data):
