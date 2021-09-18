@@ -120,7 +120,7 @@ class Unicornetto:
             funcname = self.firmware.get_dwarf_funcname(address)
             source_line = self.firmware.get_dwarf_source(address)
             trace = (address, disasm_str, cycles, self.cycle_count, funcname, source_line)
-            self.traces += trace
+            self.traces.append(trace)
 
     def _hook_block(self, uc, address, size, user_data):
         self._print_debug(f"Entering basic block at 0x{address:08x}, block size = 0x{size}")
