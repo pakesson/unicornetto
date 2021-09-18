@@ -120,12 +120,7 @@ class STM32F030x6(Unicornetto):
         elif ins.mnemonic == 'ldrsb':
             cycles = 2
         elif ins.mnemonic == 'ldm':
-            #print("LDM")
-            #print(f"Regs read: {regs_read}")
-            #print(f"Regs write: {regs_write}")
-            # TODO: Verify
             cycles = 1 + len(regs_read) # 1+N
-            #uc.emu_stop()
         elif ins.mnemonic == 'str':
             cycles = 2
         elif ins.mnemonic == 'strh':
@@ -133,31 +128,16 @@ class STM32F030x6(Unicornetto):
         elif ins.mnemonic == 'strb':
             cycles = 2
         elif ins.mnemonic == 'stm':
-            #print("STM")
-            #print(f"Regs read: {regs_read}")
-            #print(f"Regs write: {regs_write}")
-            # TODO: Verify
             cycles = 1 + len(regs_read) # 1+N
-            #uc.emu_stop()
         elif ins.mnemonic == 'push':
-            #print("PUSH")
-            #print(f"Regs read: {regs_read}")
-            #print(f"Regs write: {regs_write}")
             N = len(regs_read) - 1 # Don't count 'sp'
-            # TODO: Verify
             cycles = 1 + N
-            #uc.emu_stop()
         elif ins.mnemonic == 'pop':
-            #print("POP")
-            #print(f"Regs read: {regs_read}")
-            #print(f"Regs write: {regs_write}")
             N = len(regs_write) - 1 # Don't count 'sp'
-            # TODO: Verify
             if 'pc' in regs_write:
                 cycles = 4 + N
             else:
                 cycles = 1 + N
-            #uc.emu_stop()
         elif ins.mnemonic == 'beq':
             if zero:
                 cycles = 3
@@ -172,6 +152,10 @@ class STM32F030x6(Unicornetto):
             # else cycles = 1
         elif ins.mnemonic == 'ble':
             if zero or (negative != overflow):
+                cycles = 3
+            # else cycles = 1
+        elif ins.mnemonic == 'bhi':
+            if carry and not zero:
                 cycles = 3
             # else cycles = 1
         elif ins.mnemonic == 'blo':
