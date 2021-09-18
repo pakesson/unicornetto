@@ -12,6 +12,7 @@ if __name__ == '__main__':
 
     unicornetto = STM32F030x6(target_file)
 
+    # Stub out functions that access peripherals we haven't implemented
     unicornetto.stub_function('HAL_RCC_OscConfig')
     unicornetto.stub_function('HAL_RCC_ClockConfig')
     unicornetto.stub_function('HAL_GPIO_Init')
