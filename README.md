@@ -1,3 +1,14 @@
+# Features
+
+Firmware emulation based on Unicorn. Only STM32F030 (Arm Cortex-M0) is currently implemented.
+
+* Function hooking
+* Function stubbing
+* Execution tracing
+* Accurate(ish) cycle count
+* Basic fault injection (glitching) support
+* Horrible performance
+
 # Examples
 
 ## AES execution trace (`example_stm32f030x6_cw_exec_trace.py`)
