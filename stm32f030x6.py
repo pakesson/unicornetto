@@ -162,6 +162,10 @@ class STM32F030x6(Unicornetto):
             if not carry:
                 cycles = 3
             # else cycles = 1
+        elif ins.mnemonic == 'bls':
+            if not carry or zero:
+                cycles = 3
+            # else cycles = 1
         # TODO: More conditional branches missing here
         elif ins.mnemonic == 'b':
             cycles = 3
