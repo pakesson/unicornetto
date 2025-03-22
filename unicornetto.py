@@ -154,7 +154,7 @@ class Unicornetto:
         self.function_hooks[symbol_or_addr] = func
 
     def map_memory(self, address, size, perms=UC_PROT_ALL):
-        self.uc.mem_map(address, size, perms=UC_PROT_READ|UC_PROT_WRITE)
+        self.uc.mem_map(address, size, perms=perms)
 
     def write_memory(self, address, value):
         self.uc.mem_write(address, value)
