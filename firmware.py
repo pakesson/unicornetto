@@ -9,6 +9,8 @@ class Firmware:
         self.elffile = ELFFile(self.elfstream)
         self.symbol_table = {}
 
+        self.symtab_section = self.elffile.get_section_by_name('.symtab')
+
         self.dwarfinfo = self.elffile.get_dwarf_info()
         self.dwarf_funcname_cache = {}
         self.dwarf_source_cache = {}
@@ -25,15 +27,13 @@ class Firmware:
             self.elfstream = None
     
     def print_symbols(self):
-        section = self.elffile.get_section_by_name('.symtab')
-        num_symbols = section.num_symbols()
+        num_symbols = self.symtab_section.num_symbols()
         print(f"Number of symbols: {num_symbols}")
-        for symbol in section.iter_symbols():
+        for symbol in self.symtab_section.iter_symbols():
             print(f"{symbol.name} {symbol['st_value']:x} {symbol['st_size']:x}")
     
     def _build_symbol_table(self):
-        section = self.elffile.get_section_by_name('.symtab')
-        for symbol in section.iter_symbols():
+        for symbol in self.symtab_section.iter_symbols():
             name = symbol.name
             value = symbol['st_value']
             #size = symbol['st_size']
@@ -41,8 +41,7 @@ class Firmware:
                 self.symbol_table[value] = name
     
     def get_symbol(self, symbol_name):
-        section = self.elffile.get_section_by_name('.symtab')
-        symbol = section.get_symbol_by_name(symbol_name)
+        symbol = self.symtab_section.get_symbol_by_name(symbol_name)
         if not symbol:
             raise RuntimeError("Symbol not found")
         symbol = symbol[0]
