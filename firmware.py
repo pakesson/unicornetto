@@ -14,6 +14,15 @@ class Firmware:
         self.dwarf_source_cache = {}
 
         self._build_symbol_table()
+
+    def __del__(self):
+        if hasattr(self, 'elfstream') and self.elfstream:
+            self.elfstream.close()
+
+    def close(self):
+        if hasattr(self, 'elfstream') and self.elfstream:
+            self.elfstream.close()
+            self.elfstream = None
     
     def print_symbols(self):
         section = self.elffile.get_section_by_name('.symtab')
